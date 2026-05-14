@@ -1,156 +1,190 @@
 'use client'
 
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { useState } from 'react';
-import { useAccount, useBalance } from 'wagmi';
+import { useState, useEffect } from 'react';
+import { useAccount, useBalance, useSendTransaction, usePrepareSendTransaction } from 'wagmi';
+import { parseEther } from 'viem';
+import { QRCodeSVG } from 'qrcode.react';
 
 export default function Home() {
   const { address, isConnected } = useAccount();
-  const { data: balance } = useBalance({ address: address });
   
-  const [activeTab, setActiveTab] = useState('home');
-  const [view, setView] = useState('main'); // 'main' or 'send'
-  const [pin, setPin] = useState('');
+  // ARC Chain Native Token (USDC) Balance
+  const { data: balance } = useBalance({ 
+    address: address,
+    watch: true // रियल टाइम अपडेट के लिए
+  });
+
+  const [view, setView] = useState('main'); 
+  const [activeTab, setActiveTab] = useState('coins');
+  const [recipient, setRecipient] = useState('');
+  const [sendAmount, setSendAmount] = useState('');
+
+  // 1. Transaction Logic (Only for EVM Address)
+  const isAddressValid = recipient.startsWith('0x') && recipient.length === 42;
+  
+  const { config } = usePrepareSendTransaction({
+    to: isAddressValid ? recipient : undefined,
+    value: sendAmount ? parseEther(sendAmount) : undefined,
+    enabled: isAddressValid && !!sendAmount,
+  });
+  
+  const { sendTransaction, isLoading: isSending } = useSendTransaction(config);
 
   const displayBalance = isConnected && balance 
     ? (Number(balance.value) / 10 ** balance.decimals).toFixed(4) 
     : '0.00';
 
   return (
-    <main className="min-h-screen bg-white text-black flex flex-col items-center font-sans">
+    <main className="min-h-screen bg-white text-black flex flex-col items-center font-sans select-none">
       
-      {/* HEADER - photo_2026-05-14_10-34-24.jpg जैसा */}
-      <nav className="w-full p-4 flex justify-between items-center sticky top-0 bg-white z-50">
+      {/* HEADER */}
+      <nav className="w-full p-4 flex justify-between items-center sticky top-0 bg-white/80 backdrop-blur-md z-50">
         <div className="flex items-center gap-2">
-           <div className="w-8 h-8 bg-gray-200 rounded-full overflow-hidden border">
-              <span className="flex items-center justify-center h-full text-xs">👤</span>
+           <div className="w-9 h-9 bg-purple-100 rounded-full flex items-center justify-center border-2 border-purple-600 overflow-hidden">
+              <span className="font-bold text-purple-700 text-sm">AB</span>
            </div>
-           <h1 className="font-bold text-lg">Home</h1>
+           <h1 className="font-black text-xl tracking-tight italic">ArcPay</h1>
         </div>
-        <div className="flex gap-4 text-xl items-center">
-          <span>🔍</span> <span>🔳</span> <span>💬</span>
-        </div>
+        <ConnectButton showBalance={false} chainStatus="icon" accountStatus="avatar" />
       </nav>
 
-      <div className="w-full max-w-md px-4 space-y-6">
+      <div className="w-full max-w-md px-5">
         
         {view === 'main' ? (
-          <>
-            {/* MAIN BALANCE AREA */}
-            <div className="py-8 flex justify-between items-start">
-              <h2 className="text-5xl font-black tracking-tight">₹{isConnected ? '281.21' : '0.00'}</h2>
-              <button className="bg-blue-600 text-white px-4 py-2 rounded-full font-bold text-sm flex items-center gap-2 shadow-lg">
-                🎁 Earn
-              </button>
-            </div>
-
-            {/* QUICK ACTIONS - Icons Like your photo */}
-            <div className="grid grid-cols-4 gap-2">
-              <NavSquare label="Deposit" icon="S" color="bg-gray-100" />
-              <NavSquare label="Trade" icon="⇅" color="bg-gray-100" />
-              <NavSquare label="Send" icon="↗" color="bg-gray-100" onClick={() => setView('send')} />
-              <NavIcon label="Request" icon="👤" color="bg-gray-100" />
-            </div>
-
-            {/* TOKEN LIST - photo_2026-05-14_10-34-24.jpg जैसा */}
-            <div className="pt-6 space-y-6">
-              <div className="flex gap-6 border-b text-sm font-bold text-gray-400">
-                <span className="text-black border-b-2 border-black pb-2">Coins</span>
-                <span>Collectibles</span>
-                <span>Activity</span>
-              </div>
-              
-              <div className="space-y-5 pb-24">
-                <TokenRow name="Ethereum" symbol="ETH" balance={displayBalance} price="₹143.66" change="-3.32%" color="bg-blue-600" />
-                <TokenRow name="BNB" symbol="BNB" balance="0.00195" price="₹124.81" change="-100%" color="bg-yellow-500" />
-                <TokenRow name="Tether" symbol="USDT" balance="0.095" price="₹9.17" change="-0.08%" color="bg-green-500" />
-                <TokenRow name="Arc Token" symbol="ARC" balance="100.0" price="₹50.00" change="+2.40%" color="bg-purple-600" />
+          <div className="animate-in fade-in duration-500">
+            {/* PORTFOLIO AREA */}
+            <div className="py-10">
+              <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest mb-1">Total Balance (ARC Chain)</p>
+              <div className="flex justify-between items-end">
+                <h2 className="text-5xl font-black tracking-tighter">
+                  ₹{(Number(displayBalance) * 83.5).toLocaleString('en-IN')}
+                </h2>
+                <span className="text-green-500 font-bold text-sm mb-1">+2.45%</span>
               </div>
             </div>
-          </>
-        ) : (
-          /* SEND SCREEN - photo_2026-05-14_10-34-22.jpg जैसा */
-          <div className="animate-in slide-in-from-bottom duration-300 flex flex-col h-[85vh]">
-            <div className="flex justify-between items-center mb-8">
-               <button onClick={() => setView('main')} className="text-2xl">←</button>
-               <h2 className="font-serif italic text-xl">Send</h2>
-               <div className="w-6"></div>
+
+            {/* ACTION BUTTONS */}
+            <div className="grid grid-cols-4 gap-3 mb-10">
+              <QuickBtn label="Deposit" icon="🏦" />
+              <QuickBtn label="Swap" icon="⇄" onClick={() => setView('swap')} />
+              <QuickBtn label="Send" icon="↗" onClick={() => setView('send')} />
+              <QuickBtn label="Receive" icon="📥" onClick={() => setView('receive')} />
             </div>
 
-            <div className="bg-gray-50 p-3 rounded-full flex items-center gap-3 mb-10">
-               <span className="text-gray-400 pl-2">To</span>
-               <div className="flex items-center gap-2 bg-white pr-4 py-1 rounded-full border shadow-sm">
-                  <div className="w-5 h-5 bg-orange-400 rounded-full"></div>
-                  <span className="text-xs font-bold">0x587...4cC3</span>
-               </div>
+            {/* ASSET TABS */}
+            <div className="flex gap-8 border-b border-gray-100 text-xs font-black text-gray-400 mb-6">
+              <button onClick={() => setActiveTab('coins')} className={`${activeTab === 'coins' ? 'text-black border-b-2 border-black' : ''} pb-3`}>COINS</button>
+              <button onClick={() => setActiveTab('activity')} className={`${activeTab === 'activity' ? 'text-black border-b-2 border-black' : ''} pb-3`}>ACTIVITY</button>
             </div>
 
-            <div className="text-center space-y-2 mb-8">
-               <h2 className="text-6xl font-black">₹{pin || '0'}</h2>
-               <p className="text-gray-400 font-bold uppercase text-xs tracking-widest">↓ 0 ETH</p>
-            </div>
-
-            {/* NUMBER PAD */}
-            <div className="grid grid-cols-3 gap-y-8 text-center text-2xl font-bold mt-auto pb-10">
-               {[1,2,3,4,5,6,7,8,9,'.',0].map(n => (
-                 <div key={n} onClick={() => setPin(pin + n)} className="py-4 active:bg-gray-100 rounded-full cursor-pointer">{n}</div>
-               ))}
-               <div onClick={() => setPin(pin.slice(0, -1))} className="py-4 active:bg-gray-100 rounded-full cursor-pointer">⌫</div>
-            </div>
-
-            {/* SWIPE TO SEND BUTTON - photo_2026-05-14_10-34-22.jpg की जान */}
-            <div className="relative w-full bg-blue-700 h-16 rounded-full flex items-center justify-center overflow-hidden mb-6">
-                <p className="text-white font-bold text-sm">Slide to Send</p>
-                <div className="absolute left-1 w-14 h-14 bg-white/20 rounded-full flex items-center justify-center animate-pulse">
-                   <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-black">»</div>
-                </div>
+            {/* TOKEN LIST */}
+            <div className="space-y-6 pb-28">
+              <TokenItem name="ARC USDC" symbol="USDC" balance={displayBalance} price="₹83.50" logo="🟣" />
+              <TokenItem name="Ethereum" symbol="ETH" balance="0.000" price="₹2,45,000" logo="🔹" />
+              {/* आपका खुद का टोकन यहाँ लोड होगा */}
+              <TokenItem name="Abhi Token" symbol="ABHI" balance="500.0" price="₹1.20" logo="🔥" />
             </div>
           </div>
-        )}
+        ) : view === 'send' ? (
+          /* SEND SCREEN (photo_2026-05-14_10-34-22.jpg Inspired) */
+          <div className="animate-in slide-in-from-bottom duration-300">
+            <header className="flex justify-between items-center py-6">
+               <button onClick={() => setView('main')} className="text-2xl font-light text-gray-400">✕</button>
+               <h2 className="font-bold text-lg">Send Assets</h2>
+               <div className="w-6"></div>
+            </header>
+
+            <div className="space-y-6">
+               <div className="bg-gray-50 p-4 rounded-3xl">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Recipient EVM Address</label>
+                  <input 
+                    value={recipient} 
+                    onChange={(e) => setRecipient(e.target.value)}
+                    placeholder="0x..." 
+                    className="w-full bg-transparent text-sm font-mono font-bold outline-none mt-2 text-purple-700"
+                  />
+               </div>
+
+               <div className="text-center py-10">
+                  <input 
+                    type="number"
+                    value={sendAmount}
+                    onChange={(e) => setSendAmount(e.target.value)}
+                    placeholder="0"
+                    className="text-7xl font-black w-full text-center outline-none bg-transparent"
+                  />
+                  <p className="text-gray-400 font-bold text-xs mt-2 uppercase tracking-tighter">Available: {displayBalance} USDC</p>
+               </div>
+
+               {/* SLIDE TO SEND BUTTON (Visual Only for Prototype) */}
+               <button 
+                disabled={!sendTransaction || isSending}
+                onClick={() => sendTransaction?.()}
+                className={`w-full py-5 rounded-[2rem] font-black text-sm tracking-widest transition-all ${isAddressValid && sendAmount ? 'bg-blue-600 text-white shadow-2xl' : 'bg-gray-100 text-gray-300'}`}
+               >
+                 {isSending ? 'CONFIRMING...' : 'SLIDE TO SEND »'}
+               </button>
+            </div>
+          </div>
+        ) : view === 'receive' ? (
+          <div className="animate-in zoom-in-95 duration-300 text-center space-y-8 pt-10">
+             <button onClick={() => setView('main')} className="absolute left-6 top-8 text-2xl">←</button>
+             <h2 className="font-black text-2xl uppercase italic">Your ARC QR</h2>
+             <div className="bg-white p-6 inline-block rounded-[3rem] border-[8px] border-gray-50 shadow-2xl">
+                {isConnected && address ? <QRCodeSVG value={address} size={220} /> : <div className="w-40 h-40 bg-gray-100 animate-pulse rounded-3xl" />}
+             </div>
+             <div className="bg-gray-50 p-4 rounded-2xl border text-[10px] font-mono break-all font-bold mx-4">
+                {address || "Not Connected"}
+             </div>
+             <p className="text-xs text-gray-400 font-bold px-10 italic">Scan this QR to receive any EVM compatible token on ARC Chain</p>
+          </div>
+        ) : null}
       </div>
 
       {/* BOTTOM NAV */}
       {view === 'main' && (
-        <div className="fixed bottom-0 w-full max-w-md bg-white border-t p-4 flex justify-between px-10">
-          <span className="text-2xl">🏠</span>
-          <span className="text-2xl opacity-30">🔍</span>
-          <span className="text-2xl opacity-30">⇅</span>
-          <span className="text-2xl opacity-30">🌐</span>
-          <span className="text-2xl opacity-30">🕒</span>
+        <div className="fixed bottom-0 w-full max-w-md bg-white/90 backdrop-blur-md border-t p-5 flex justify-between px-10 z-50">
+          <NavIcon icon="🏠" active />
+          <NavIcon icon="📊" />
+          <NavIcon icon="🔄" />
+          <NavIcon icon="⚙️" />
         </div>
       )}
     </main>
   );
 }
 
-// UI HELPERS
-function NavSquare({ label, icon, onClick }: any) {
+// STYLED COMPONENTS
+function QuickBtn({ label, icon, onClick }: any) {
   return (
-    <div onClick={onClick} className="flex flex-col items-center gap-2 cursor-pointer">
-      <div className="bg-gray-100 w-16 h-16 rounded-[2rem] flex items-center justify-center text-2xl font-bold active:scale-95 transition-all">
+    <div onClick={onClick} className="flex flex-col items-center gap-2 cursor-pointer active:scale-90 transition-all">
+      <div className="bg-gray-50 w-16 h-16 rounded-[1.8rem] flex items-center justify-center text-2xl shadow-sm border border-white">
         {icon}
       </div>
-      <span className="text-xs font-bold">{label}</span>
+      <span className="text-[10px] font-black uppercase text-gray-500 tracking-tighter">{label}</span>
     </div>
   );
 }
 
-function TokenRow({ name, symbol, balance, price, change, color }: any) {
+function TokenItem({ name, symbol, balance, price, logo }: any) {
   return (
-    <div className="flex justify-between items-center">
-      <div className="flex items-center gap-3">
-        <div className={`w-10 h-10 ${color} rounded-full flex items-center justify-center text-white font-bold`}>
-          {symbol[0]}
-        </div>
+    <div className="flex justify-between items-center group">
+      <div className="flex items-center gap-4">
+        <div className="w-11 h-11 bg-gray-50 rounded-2xl flex items-center justify-center text-xl shadow-inner">{logo}</div>
         <div>
-          <p className="font-bold text-sm">{name}</p>
-          <p className="text-[10px] text-gray-400 font-bold uppercase">{balance} {symbol}</p>
+          <p className="font-black text-sm">{name}</p>
+          <p className="text-[10px] text-gray-400 font-bold">{balance} {symbol}</p>
         </div>
       </div>
       <div className="text-right">
-        <p className="font-bold text-sm">{price}</p>
-        <p className={`text-[10px] font-bold ${change.includes('-') ? 'text-red-500' : 'text-green-500'}`}>{change}</p>
+        <p className="font-black text-sm">{price}</p>
+        <p className="text-[10px] text-gray-400 font-bold">ARC Chain</p>
       </div>
     </div>
   );
+}
+
+function NavIcon({ icon, active }: any) {
+  return <span className={`text-2xl cursor-pointer ${active ? 'opacity-100' : 'opacity-20 hover:opacity-100'}`}>{icon}</span>;
 }
