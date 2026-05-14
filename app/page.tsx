@@ -3,179 +3,154 @@
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useState } from 'react';
 import { useAccount, useBalance } from 'wagmi';
-import { QRCodeSVG } from 'qrcode.react';
 
 export default function Home() {
   const { address, isConnected } = useAccount();
   const { data: balance } = useBalance({ address: address });
-
-  // App States
+  
   const [activeTab, setActiveTab] = useState('home');
-  const [rechargeType, setRechargeType] = useState<string | null>(null);
-  const [theme, setTheme] = useState('light');
-  const [username, setUsername] = useState('ItzAbhi');
+  const [view, setView] = useState('main'); // 'main' or 'send'
+  const [pin, setPin] = useState('');
 
-  // Transaction History (Dummy Data for now)
-  const [transactions] = useState([
-    { id: 1, type: 'Sent', amount: '10.5 ARC', to: '0x7a2...3b1', date: 'May 12' },
-    { id: 2, type: 'Received', amount: '50.0 ARC', from: '0x1c4...e92', date: 'May 11' },
-    { id: 3, type: 'Swap', amount: '5 ARC -> 5 USDT', date: 'May 10' },
-  ]);
-
-  const isDark = theme === 'dark';
   const displayBalance = isConnected && balance 
     ? (Number(balance.value) / 10 ** balance.decimals).toFixed(4) 
-    : '0.0000';
+    : '0.00';
 
   return (
-    <main className={`min-h-screen flex flex-col items-center pb-28 transition-all duration-300 ${isDark ? 'bg-[#0a0a12] text-white' : 'bg-[#F5F6F8] text-black'}`}>
+    <main className="min-h-screen bg-white text-black flex flex-col items-center font-sans">
       
-      {/* HEADER */}
-      <nav className={`w-full p-4 flex justify-between items-center sticky top-0 z-50 shadow-sm ${isDark ? 'bg-[#0a0a12]' : 'bg-white'}`}>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full flex items-center justify-center border-2 border-purple-600 bg-purple-100">
-             <span className="text-xl font-bold text-purple-700">{username[0]}</span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[10px] font-black text-purple-600 uppercase tracking-tighter">ArcPay India</span>
-            <span className="text-xs font-bold tracking-tight text-gray-500">@{username.toLowerCase()}</span>
-          </div>
+      {/* HEADER - photo_2026-05-14_10-34-24.jpg जैसा */}
+      <nav className="w-full p-4 flex justify-between items-center sticky top-0 bg-white z-50">
+        <div className="flex items-center gap-2">
+           <div className="w-8 h-8 bg-gray-200 rounded-full overflow-hidden border">
+              <span className="flex items-center justify-center h-full text-xs">👤</span>
+           </div>
+           <h1 className="font-bold text-lg">Home</h1>
         </div>
-        <ConnectButton showBalance={false} chainStatus="icon" />
+        <div className="flex gap-4 text-xl items-center">
+          <span>🔍</span> <span>🔳</span> <span>💬</span>
+        </div>
       </nav>
 
-      <div className="w-full max-w-md space-y-4 pt-2 px-3">
+      <div className="w-full max-w-md px-4 space-y-6">
         
-        {/* WALLET CARD */}
-        <div className="p-6 rounded-[2.5rem] shadow-2xl bg-gradient-to-br from-purple-700 via-purple-800 to-indigo-900 text-white">
-          <p className="text-[10px] font-bold opacity-70 uppercase tracking-[0.2em]">Total Balance</p>
-          <h2 className="text-3xl font-black mt-1">
-            {isConnected ? `${displayBalance} ${balance?.symbol}` : `0.00 ARC`}
-          </h2>
-        </div>
+        {view === 'main' ? (
+          <>
+            {/* MAIN BALANCE AREA */}
+            <div className="py-8 flex justify-between items-start">
+              <h2 className="text-5xl font-black tracking-tight">₹{isConnected ? '281.21' : '0.00'}</h2>
+              <button className="bg-blue-600 text-white px-4 py-2 rounded-full font-bold text-sm flex items-center gap-2 shadow-lg">
+                🎁 Earn
+              </button>
+            </div>
 
-        {/* MAIN 4 OPTIONS (From your image reference) */}
-        <div className={`grid grid-cols-2 gap-0.5 rounded-3xl overflow-hidden shadow-sm border ${isDark ? 'border-white/5 bg-white/5' : 'border-gray-100 bg-gray-100'}`}>
-          <MenuBox label="Swap" icon="⇄" onClick={() => setActiveTab('swap')} active={activeTab === 'swap'} />
-          <MenuBox label="Send" icon="↗" onClick={() => setRechargeType('Send Money')} />
-          <MenuBox label="Receive" icon="📥" onClick={() => setActiveTab('receive')} active={activeTab === 'receive'} />
-          <MenuBox label="Transactions" icon="🕒" onClick={() => setActiveTab('history')} active={activeTab === 'history'} />
-        </div>
+            {/* QUICK ACTIONS - Icons Like your photo */}
+            <div className="grid grid-cols-4 gap-2">
+              <NavSquare label="Deposit" icon="S" color="bg-gray-100" />
+              <NavSquare label="Trade" icon="⇅" color="bg-gray-100" />
+              <NavSquare label="Send" icon="↗" color="bg-gray-100" onClick={() => setView('send')} />
+              <NavIcon label="Request" icon="👤" color="bg-gray-100" />
+            </div>
 
-        {/* CONTENT AREA */}
-        <div className="min-h-[300px]">
-          
-          {/* RECHARGE & BILLS (HOME VIEW) */}
-          {activeTab === 'home' && !rechargeType && (
-            <div className="animate-in fade-in duration-500 bg-white p-5 rounded-3xl border border-gray-100 shadow-sm">
-              <h2 className="font-black text-xs mb-5 uppercase tracking-widest opacity-60">Bill Payments</h2>
-              <div className="grid grid-cols-4 gap-y-8">
-                <SquareIcon label="Mobile" icon="📱" onClick={() => setRechargeType('Mobile Recharge')} />
-                <SquareIcon label="Electricity" icon="💡" onClick={() => setRechargeType('Electricity Bill')} />
-                <SquareIcon label="DTH" icon="📡" onClick={() => setRechargeType('DTH Payment')} />
-                <SquareIcon label="Gas" icon="🔥" onClick={() => setRechargeType('Gas Bill')} />
+            {/* TOKEN LIST - photo_2026-05-14_10-34-24.jpg जैसा */}
+            <div className="pt-6 space-y-6">
+              <div className="flex gap-6 border-b text-sm font-bold text-gray-400">
+                <span className="text-black border-b-2 border-black pb-2">Coins</span>
+                <span>Collectibles</span>
+                <span>Activity</span>
+              </div>
+              
+              <div className="space-y-5 pb-24">
+                <TokenRow name="Ethereum" symbol="ETH" balance={displayBalance} price="₹143.66" change="-3.32%" color="bg-blue-600" />
+                <TokenRow name="BNB" symbol="BNB" balance="0.00195" price="₹124.81" change="-100%" color="bg-yellow-500" />
+                <TokenRow name="Tether" symbol="USDT" balance="0.095" price="₹9.17" change="-0.08%" color="bg-green-500" />
+                <TokenRow name="Arc Token" symbol="ARC" balance="100.0" price="₹50.00" change="+2.40%" color="bg-purple-600" />
               </div>
             </div>
-          )}
-
-          {/* SEND / RECHARGE FORM */}
-          {rechargeType && (
-            <div className="bg-white p-7 rounded-[2.5rem] border animate-in slide-in-from-right-8 duration-300">
-              <div className="flex justify-between items-center mb-8">
-                <h2 className="font-black text-xl uppercase italic">{rechargeType}</h2>
-                <button onClick={() => setRechargeType(null)} className="text-red-500 font-black text-xs px-3 py-1 bg-red-50 rounded-full">CANCEL</button>
-              </div>
-              <div className="space-y-4">
-                <InputBox label="Recipient / ID" placeholder="Enter here..." />
-                <InputBox label="Amount" placeholder="0.00" type="number" />
-                <button className="w-full bg-purple-700 text-white py-5 rounded-[1.5rem] font-black shadow-lg">CONFIRM TRANSACTION</button>
-              </div>
+          </>
+        ) : (
+          /* SEND SCREEN - photo_2026-05-14_10-34-22.jpg जैसा */
+          <div className="animate-in slide-in-from-bottom duration-300 flex flex-col h-[85vh]">
+            <div className="flex justify-between items-center mb-8">
+               <button onClick={() => setView('main')} className="text-2xl">←</button>
+               <h2 className="font-serif italic text-xl">Send</h2>
+               <div className="w-6"></div>
             </div>
-          )}
 
-          {/* TRANSACTION HISTORY VIEW */}
-          {activeTab === 'history' && (
-            <div className="space-y-3 animate-in fade-in duration-300">
-              <h2 className="font-black text-xs uppercase opacity-60 px-2 tracking-widest">Recent Activity</h2>
-              {transactions.map((trnx) => (
-                <div key={trnx.id} className="bg-white p-4 rounded-2xl flex justify-between items-center border border-gray-50 shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${trnx.type === 'Received' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
-                      {trnx.type === 'Received' ? '↓' : '↑'}
-                    </div>
-                    <div>
-                      <p className="font-bold text-sm">{trnx.type}</p>
-                      <p className="text-[10px] text-gray-400">{trnx.date}</p>
-                    </div>
-                  </div>
-                  <p className={`font-black text-sm ${trnx.type === 'Received' ? 'text-green-600' : 'text-black'}`}>
-                    {trnx.type === 'Received' ? '+' : '-'}{trnx.amount}
-                  </p>
+            <div className="bg-gray-50 p-3 rounded-full flex items-center gap-3 mb-10">
+               <span className="text-gray-400 pl-2">To</span>
+               <div className="flex items-center gap-2 bg-white pr-4 py-1 rounded-full border shadow-sm">
+                  <div className="w-5 h-5 bg-orange-400 rounded-full"></div>
+                  <span className="text-xs font-bold">0x587...4cC3</span>
+               </div>
+            </div>
+
+            <div className="text-center space-y-2 mb-8">
+               <h2 className="text-6xl font-black">₹{pin || '0'}</h2>
+               <p className="text-gray-400 font-bold uppercase text-xs tracking-widest">↓ 0 ETH</p>
+            </div>
+
+            {/* NUMBER PAD */}
+            <div className="grid grid-cols-3 gap-y-8 text-center text-2xl font-bold mt-auto pb-10">
+               {[1,2,3,4,5,6,7,8,9,'.',0].map(n => (
+                 <div key={n} onClick={() => setPin(pin + n)} className="py-4 active:bg-gray-100 rounded-full cursor-pointer">{n}</div>
+               ))}
+               <div onClick={() => setPin(pin.slice(0, -1))} className="py-4 active:bg-gray-100 rounded-full cursor-pointer">⌫</div>
+            </div>
+
+            {/* SWIPE TO SEND BUTTON - photo_2026-05-14_10-34-22.jpg की जान */}
+            <div className="relative w-full bg-blue-700 h-16 rounded-full flex items-center justify-center overflow-hidden mb-6">
+                <p className="text-white font-bold text-sm">Slide to Send</p>
+                <div className="absolute left-1 w-14 h-14 bg-white/20 rounded-full flex items-center justify-center animate-pulse">
+                   <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-black">»</div>
                 </div>
-              ))}
             </div>
-          )}
-
-          {/* RECEIVE VIEW (With Real Address & QR) */}
-          {activeTab === 'receive' && (
-            <div className="bg-white p-8 rounded-[3rem] border text-center space-y-7 animate-in zoom-in-95">
-              <h2 className="font-black text-xl uppercase italic text-purple-700">My QR Code</h2>
-              <div className="bg-white p-6 inline-block rounded-[2.5rem] border-[6px] border-purple-600 shadow-2xl">
-                {isConnected && address ? <QRCodeSVG value={address} size={180} /> : <p className="p-10 italic opacity-30 font-bold">Connect Wallet</p>}
-              </div>
-              <div className="bg-gray-50 p-3 rounded-2xl border text-[10px] font-mono break-all font-bold text-purple-700">
-                {address || "Connect wallet to see address"}
-              </div>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
-      {/* BOTTOM NAVIGATION */}
-      <div className={`fixed bottom-0 w-full max-w-md border-t px-10 py-4 flex justify-between items-center z-[100] ${isDark ? 'bg-[#0a0a12] border-white/10' : 'bg-white border-gray-200'}`}>
-        <NavIcon label="Home" icon="🏠" active={activeTab === 'home'} onClick={() => {setActiveTab('home'); setRechargeType(null)}} />
-        <div onClick={() => setActiveTab('receive')} className="w-16 h-16 bg-purple-700 rounded-[1.5rem] flex items-center justify-center shadow-2xl border-[6px] border-white cursor-pointer -mt-10">
-           <span className="text-xl text-white font-black italic">QR</span>
+      {/* BOTTOM NAV */}
+      {view === 'main' && (
+        <div className="fixed bottom-0 w-full max-w-md bg-white border-t p-4 flex justify-between px-10">
+          <span className="text-2xl">🏠</span>
+          <span className="text-2xl opacity-30">🔍</span>
+          <span className="text-2xl opacity-30">⇅</span>
+          <span className="text-2xl opacity-30">🌐</span>
+          <span className="text-2xl opacity-30">🕒</span>
         </div>
-        <NavIcon label="Settings" icon="⚙️" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
-      </div>
+      )}
     </main>
   );
 }
 
 // UI HELPERS
-function MenuBox({ label, icon, onClick, active }: any) {
+function NavSquare({ label, icon, onClick }: any) {
   return (
-    <div onClick={onClick} className={`bg-white p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all active:scale-95 ${active ? 'bg-purple-50' : ''}`}>
-      <span className={`text-2xl ${active ? 'text-purple-700' : 'text-gray-700'}`}>{icon}</span>
-      <span className={`text-[11px] font-black uppercase tracking-tight ${active ? 'text-purple-700' : 'text-gray-500'}`}>{label}</span>
+    <div onClick={onClick} className="flex flex-col items-center gap-2 cursor-pointer">
+      <div className="bg-gray-100 w-16 h-16 rounded-[2rem] flex items-center justify-center text-2xl font-bold active:scale-95 transition-all">
+        {icon}
+      </div>
+      <span className="text-xs font-bold">{label}</span>
     </div>
   );
 }
 
-function SquareIcon({ label, icon, onClick }: any) {
+function TokenRow({ name, symbol, balance, price, change, color }: any) {
   return (
-    <div onClick={onClick} className="flex flex-col items-center gap-2 cursor-pointer group">
-      <div className="bg-gray-50 w-14 h-14 rounded-[1.2rem] flex items-center justify-center border shadow-sm group-active:scale-90 transition-all text-2xl">{icon}</div>
-      <span className="text-[9px] font-black text-center opacity-70 uppercase tracking-tighter">{label}</span>
-    </div>
-  );
-}
-
-function NavIcon({ label, icon, active, onClick }: any) {
-  return (
-    <div onClick={onClick} className={`flex flex-col items-center gap-1 cursor-pointer ${active ? 'text-purple-700' : 'opacity-40 text-gray-500'}`}>
-      <span className="text-xl">{icon}</span>
-      <span className="text-[8px] font-black uppercase">{label}</span>
-    </div>
-  );
-}
-
-function InputBox({ label, placeholder, type = "text" }: any) {
-  return (
-    <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
-      <label className="text-[10px] font-black opacity-40 uppercase tracking-widest">{label}</label>
-      <input type={type} placeholder={placeholder} className="w-full bg-transparent text-lg font-bold outline-none mt-2 text-black" />
+    <div className="flex justify-between items-center">
+      <div className="flex items-center gap-3">
+        <div className={`w-10 h-10 ${color} rounded-full flex items-center justify-center text-white font-bold`}>
+          {symbol[0]}
+        </div>
+        <div>
+          <p className="font-bold text-sm">{name}</p>
+          <p className="text-[10px] text-gray-400 font-bold uppercase">{balance} {symbol}</p>
+        </div>
+      </div>
+      <div className="text-right">
+        <p className="font-bold text-sm">{price}</p>
+        <p className={`text-[10px] font-bold ${change.includes('-') ? 'text-red-500' : 'text-green-500'}`}>{change}</p>
+      </div>
     </div>
   );
 }
